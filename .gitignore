@@ -1,0 +1,64 @@
+# Build output
+bin/
+obj/
+publish/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# Build files
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.cache
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Test results
+TestResults/
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+
+# Logs and reports
+logs/
+Logs/
+reports/
+Reports/
+*.log
+*.dmp
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# User secrets and local settings
+secrets.json
+appsettings.Local.json
+appsettings.Development.local.json
+
+# Operating systems
+Thumbs.db
+Desktop.ini
+.DS_Store
