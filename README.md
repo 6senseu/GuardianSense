@@ -2,12 +2,6 @@
   <img src="assets/banner.png" width="100%">
 </p>
 
-<h1 align="center">GuardianSense</h1>
-
-<p align="center">
-Modern Windows Security Platform
-</p>
-
 <p align="center">
 
 <img src="https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet">
@@ -115,7 +109,10 @@ Requirements:
 
 * .NET 9 SDK
 * Windows 10 or Windows 11
-* Visual Studio 2022 (or newer)
+* Visual Studio Code
+* or
+* Visual Studio 2022 or newer
+  
 
 Clone the repository:
 
