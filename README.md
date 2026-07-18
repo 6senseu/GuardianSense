@@ -1,10 +1,21 @@
-# GuardianSense
+<p align="center">
+  <img src="assets/banner.png" width="100%">
+</p>
 
-GuardianSense is an open-source Windows security platform built with **C#** and **.NET 9**. Its goal is to provide a modern, modular, and extensible malware detection framework that combines local analysis, cloud intelligence, and behavioral detection.
+<h1 align="center">GuardianSense</h1>
 
-> **Status:** Early Development 🚧
+<p align="center">
+Modern Windows Security Platform
+</p>
 
----
+<p align="center">
+
+<img src="https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet">
+
+<img src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows">
+
+<img src="https://img.shields.io/badge/Status-Early_Development-orange?style=for-the-badge">
+
 
 ## Features
 
