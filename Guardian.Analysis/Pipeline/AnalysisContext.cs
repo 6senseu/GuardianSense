@@ -25,6 +25,8 @@ public sealed class AnalysisContext
 
     public AuthenticodeResult Authenticode { get; set; } = new();
 
+    public CloudReputationResult CloudReputation { get; set; } = new();
+
     public LocalRiskAssessment Risk { get; set; } =
         new();
 

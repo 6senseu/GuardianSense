@@ -25,17 +25,20 @@ public sealed class DownloadWatcher : IDisposable
         new();
 
     private readonly ReportStore _reportStore;
+    private readonly QuarantineManager _quarantineManager;
     private readonly AnalysisPipeline _analysisPipeline;
 
     public DownloadWatcher(
         ILogger<DownloadWatcher> logger,
         IOptions<GuardianSettings> options,
         ReportStore reportStore,
+        QuarantineManager quarantineManager,
         AnalysisPipeline analysisPipeline)
     {
         _logger = logger;
         _settings = options.Value;
         _reportStore = reportStore;
+        _quarantineManager = quarantineManager;
         _analysisPipeline = analysisPipeline;
 
         string downloadDirectory =
@@ -68,10 +71,10 @@ public sealed class DownloadWatcher : IDisposable
 
         _logger.LogInformation(
             """
-            Download-Wächter gestartet.
-            Ordner: {Directory}
-            Unterordner: {IncludeSubdirectories}
-            Sprache: {Language}
+            Download watcher started.
+            Folder: {Directory}
+            Subdirectories: {IncludeSubdirectories}
+            Language: {Language}
             """,
             _watcher.Path,
             _watcher.IncludeSubdirectories,
@@ -83,7 +86,7 @@ public sealed class DownloadWatcher : IDisposable
         _watcher.EnableRaisingEvents = false;
 
         _logger.LogInformation(
-            "Download-Wächter beendet.");
+            "Download watcher stopped.");
     }
 
     private void OnFileDetected(
@@ -112,7 +115,7 @@ public sealed class DownloadWatcher : IDisposable
         if (IgnoredExtensions.Contains(extension))
         {
             _logger.LogDebug(
-                "Unvollständiger Download ignoriert: {Path}",
+                "Ignoring incomplete download: {Path}",
                 path);
 
             return;
@@ -133,7 +136,7 @@ public sealed class DownloadWatcher : IDisposable
             {
                 _logger.LogError(
                     exception,
-                    "Datei konnte nicht untersucht werden: {Path}",
+                    "Could not analyze file: {Path}",
                     path);
             }
             finally
@@ -156,7 +159,7 @@ public sealed class DownloadWatcher : IDisposable
         if (!isReady)
         {
             _logger.LogWarning(
-                "Datei blieb gesperrt oder verschwand: {Path}",
+                "File stayed locked or disappeared: {Path}",
                 path);
 
             return;
@@ -165,7 +168,7 @@ public sealed class DownloadWatcher : IDisposable
         if (!File.Exists(path))
         {
             _logger.LogWarning(
-                "Datei existiert nicht mehr: {Path}",
+                "File no longer exists: {Path}",
                 path);
 
             return;
@@ -181,20 +184,24 @@ public sealed class DownloadWatcher : IDisposable
         string reportPath =
             await _reportStore.SaveAsync(report);
 
+        QuarantineRecord? quarantineRecord =
+            await _quarantineManager.HandleAsync(report);
+
         _logger.LogInformation(
             """
-        Neuer Download untersucht:
-        Datei: {FileName}
-        Pfad: {Path}
-        Größe: {Size}
-        Endung: {Extension}
-        Erkannter Dateityp: {DetectedFileType}
-        Dateityp stimmt überein: {TypeMatches}
+        New download analyzed:
+        File: {FileName}
+        Path: {Path}
+        Size: {Size}
+        Extension: {Extension}
+        Detected file type: {DetectedFileType}
+        File type matches extension: {TypeMatches}
         SHA-256: {Sha256}
-        Lokales Risiko: {RiskLevel}
-        Risiko-Score: {RiskScore}/100
-        Analysedauer: {DurationMilliseconds:F2} ms
-        Bericht: {ReportPath}
+        Local risk: {RiskLevel}
+        Risk score: {RiskScore}/100
+        Quarantined: {Quarantined}
+        Analysis duration: {DurationMilliseconds:F2} ms
+        Report: {ReportPath}
         """,
             report.FileName,
             report.OriginalPath,
@@ -205,6 +212,7 @@ public sealed class DownloadWatcher : IDisposable
             report.Sha256,
             report.LocalRiskLevel,
             report.LocalRiskScore,
+            quarantineRecord is not null,
             stopwatch.Elapsed.TotalMilliseconds,
             reportPath);
     }
@@ -315,7 +323,7 @@ public sealed class DownloadWatcher : IDisposable
     {
         _logger.LogError(
             eventArgs.GetException(),
-            "Fehler im Download-Wächter.");
+            "Error in the download watcher.");
     }
 
     public void Dispose()

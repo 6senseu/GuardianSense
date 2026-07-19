@@ -1,26 +1,37 @@
+using Guardian.Shared.Models;
+
 namespace Guardian.Analysis.Authenticode;
 
 public sealed class AuthenticodeResult
 {
+    // ------------------------------------------------------------------------
+    // Signature State
+    // ------------------------------------------------------------------------
+
     public bool IsSigned { get; set; }
 
-    public bool IsSignatureValid { get; set; }
+    public bool IsValid { get; set; }
 
-    public bool IsCertificateCurrentlyValid { get; set; }
+    public SignatureStatus SignatureStatus { get; set; } =
+        SignatureStatus.Unknown;
 
-    public string Publisher { get; set; } = string.Empty;
+    // ------------------------------------------------------------------------
+    // Certificate Information
+    // ------------------------------------------------------------------------
 
-    public string Issuer { get; set; } = string.Empty;
+    public string? Publisher { get; set; }
 
-    public string Subject { get; set; } = string.Empty;
+    public string? Issuer { get; set; }
 
-    public string Thumbprint { get; set; } = string.Empty;
+    public DateTimeOffset? ValidFrom { get; set; }
 
-    public string SerialNumber { get; set; } = string.Empty;
+    public DateTimeOffset? ValidUntil { get; set; }
 
-    public DateTimeOffset? ValidFromUtc { get; set; }
+    // ------------------------------------------------------------------------
+    // Diagnostics
+    // ------------------------------------------------------------------------
 
-    public DateTimeOffset? ValidUntilUtc { get; set; }
+    public int NativeResult { get; set; }
 
     public string StatusMessage { get; set; } = string.Empty;
 }

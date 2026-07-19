@@ -34,7 +34,7 @@ public sealed class AnalysisPipeline
         if (!File.Exists(fullPath))
         {
             throw new FileNotFoundException(
-                "Die zu analysierende Datei wurde nicht gefunden.",
+                "The file to analyze was not found.",
                 fullPath);
         }
 
@@ -153,6 +153,48 @@ public sealed class AnalysisPipeline
 
             LocalRiskCategory =
                 context.Risk.Category,
+
+            IsSigned =
+                context.Authenticode.IsSigned,
+
+            IsSignatureValid =
+                context.Authenticode.IsValid,
+
+            AuthenticodeResult =
+                context.Authenticode.NativeResult,
+
+            SignatureStatus =
+                context.Authenticode.SignatureStatus,
+
+            Publisher =
+                context.Authenticode.Publisher,
+
+            Issuer =
+                context.Authenticode.Issuer,
+
+            SignatureValidFrom =
+                context.Authenticode.ValidFrom,
+
+            SignatureValidUntil =
+                context.Authenticode.ValidUntil,
+
+            CloudReputationStatus =
+                context.CloudReputation.Status,
+
+            CloudMaliciousCount =
+                context.CloudReputation.MaliciousCount,
+
+            CloudSuspiciousCount =
+                context.CloudReputation.SuspiciousCount,
+
+            CloudHarmlessCount =
+                context.CloudReputation.HarmlessCount,
+
+            CloudUndetectedCount =
+                context.CloudReputation.UndetectedCount,
+
+            CloudPermalinkUrl =
+                context.CloudReputation.PermalinkUrl,
 
             LocalRiskReasons =
                 context.Risk.Reasons,

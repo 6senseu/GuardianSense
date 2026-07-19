@@ -1,36 +1,19 @@
 using System.Text.Json;
+using Guardian.Shared;
 using Guardian.Shared.Models;
-using System.Text.Json.Serialization;
+using Guardian.Shared.Storage;
+
 namespace Guardian.Service;
 
 public sealed class ReportStore
 {
-    private static readonly JsonSerializerOptions JsonOptions =
-        new()
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy =
-                JsonNamingPolicy.CamelCase,
-
-            Converters =
-            {
-            new JsonStringEnumConverter(
-                JsonNamingPolicy.CamelCase)
-            }
-        };
-
     private readonly ILogger<ReportStore> _logger;
     private readonly string _reportDirectory;
 
     public ReportStore(ILogger<ReportStore> logger)
     {
         _logger = logger;
-
-        _reportDirectory = Path.Combine(
-            Environment.GetFolderPath(
-                Environment.SpecialFolder.CommonApplicationData),
-            "Guardian",
-            "Reports");
+        _reportDirectory = GuardianPaths.ReportsDirectory;
 
         Directory.CreateDirectory(_reportDirectory);
     }
@@ -69,7 +52,7 @@ public sealed class ReportStore
                 await JsonSerializer.SerializeAsync(
                     stream,
                     report,
-                    JsonOptions,
+                    GuardianJsonOptions.Default,
                     cancellationToken);
 
                 await stream.FlushAsync(cancellationToken);
@@ -81,7 +64,7 @@ public sealed class ReportStore
                 overwrite: false);
 
             _logger.LogInformation(
-                "JSON-Bericht gespeichert: {ReportPath}",
+                "JSON report saved: {ReportPath}",
                 finalPath);
 
             return finalPath;
@@ -135,7 +118,7 @@ public sealed class ReportStore
         }
         catch
         {
-            // Der ursprüngliche Fehler soll nicht verdeckt werden.
+            // The original error should not be masked.
         }
     }
 }

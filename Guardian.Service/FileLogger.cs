@@ -40,7 +40,7 @@ public sealed class FileLogger : ILogger
         string directory =
             Path.GetDirectoryName(_logFilePath)
             ?? throw new InvalidOperationException(
-                "Ungültiger Logpfad.");
+                "Invalid log path.");
 
         Directory.CreateDirectory(directory);
 

@@ -1,9 +1,11 @@
+using Guardian.Analysis.Authenticode;
 using Guardian.Shared.Models;
 
 namespace Guardian.Analysis.Risk;
 
 public sealed class FileRiskAssessor
 {
+    // File types that can directly run scripts or change the system.
     private static readonly HashSet<string> VeryHighRiskExtensions =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -22,6 +24,7 @@ public sealed class FileRiskAssessor
             ".reg"
         };
 
+    // Executable and system-related file types.
     private static readonly HashSet<string> HighRiskExtensions =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -38,6 +41,7 @@ public sealed class FileRiskAssessor
             ".msix"
         };
 
+    // Documents and archives that may contain active content.
     private static readonly HashSet<string> MediumRiskExtensions =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -59,6 +63,7 @@ public sealed class FileRiskAssessor
             ".rtf"
         };
 
+    // Common data and media file types.
     private static readonly HashSet<string> LowRiskExtensions =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -76,9 +81,28 @@ public sealed class FileRiskAssessor
             ".csv"
         };
 
+    /// <summary>
+    /// Assesses a file without Authenticode information.
+    /// </summary>
     public LocalRiskAssessment Assess(
         string filePath,
         FileSignatureResult fileSignatureResult)
+    {
+        return Assess(
+            filePath,
+            fileSignatureResult,
+            authenticodeResult: null);
+    }
+
+    /// <summary>
+    /// Assesses a file using its extension, file signature
+    /// and optional Authenticode and cloud reputation information.
+    /// </summary>
+    public LocalRiskAssessment Assess(
+        string filePath,
+        FileSignatureResult fileSignatureResult,
+        AuthenticodeResult? authenticodeResult,
+        CloudReputationResult? cloudReputationResult = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(fileSignatureResult);
@@ -91,13 +115,14 @@ public sealed class FileRiskAssessor
         int score;
         string category;
 
+        // Set the base score from the file extension.
         if (string.IsNullOrWhiteSpace(extension))
         {
             score = 45;
             category = "unknown";
 
             reasons.Add(
-                "Die Datei besitzt keine erkennbare Dateiendung.");
+                "The file has no recognized extension.");
         }
         else if (VeryHighRiskExtensions.Contains(extension))
         {
@@ -105,7 +130,7 @@ public sealed class FileRiskAssessor
             category = "script-or-system-change";
 
             reasons.Add(
-                $"Die Endung {extension} kann unmittelbar Befehle oder Skripte ausführen.");
+                $"The {extension} extension can directly run commands or scripts.");
         }
         else if (HighRiskExtensions.Contains(extension))
         {
@@ -113,7 +138,7 @@ public sealed class FileRiskAssessor
             category = "executable";
 
             reasons.Add(
-                $"Die Endung {extension} gehört zu einem ausführbaren oder systemnahen Dateityp.");
+                $"The {extension} extension belongs to an executable or system-related file type.");
         }
         else if (MediumRiskExtensions.Contains(extension))
         {
@@ -121,7 +146,7 @@ public sealed class FileRiskAssessor
             category = "document-or-archive";
 
             reasons.Add(
-                $"Die Endung {extension} kann aktive Inhalte oder weitere Dateien enthalten.");
+                $"The {extension} extension may contain active content or other files.");
         }
         else if (LowRiskExtensions.Contains(extension))
         {
@@ -129,7 +154,7 @@ public sealed class FileRiskAssessor
             category = "data-file";
 
             reasons.Add(
-                $"Die Endung {extension} gehört normalerweise zu einer Datendatei.");
+                $"The {extension} extension normally belongs to a data file.");
         }
         else
         {
@@ -137,17 +162,19 @@ public sealed class FileRiskAssessor
             category = "unclassified";
 
             reasons.Add(
-                $"Die Endung {extension} ist Guardian noch nicht eindeutig bekannt.");
+                $"Guardian does not clearly recognize the {extension} extension.");
         }
 
+        // Detect names such as image.jpg.exe.
         if (HasSuspiciousDoubleExtension(fileName))
         {
             score += 25;
 
             reasons.Add(
-                "Der Dateiname enthält eine mögliche doppelte Dateiendung.");
+                "The file name contains a suspicious double extension.");
         }
 
+        // Check whether the real file type matches the extension.
         if (HasSignatureMismatch(fileSignatureResult))
         {
             int mismatchScore =
@@ -157,8 +184,22 @@ public sealed class FileRiskAssessor
             score += mismatchScore;
 
             reasons.Add(
-                $"Die Dateisignatur wurde als {fileSignatureResult.DetectedType} erkannt, passt aber nicht zur Dateiendung.");
+                $"The file signature was detected as {fileSignatureResult.DetectedType}, but it does not match the extension.");
         }
+
+        // Apply a small score change based on Authenticode.
+        ApplyAuthenticodeRisk(
+            authenticodeResult,
+            extension,
+            ref score,
+            reasons);
+
+        // Cloud reputation is the strongest signal: a known-malicious hash
+        // overrides local heuristics almost entirely.
+        ApplyCloudReputationRisk(
+            cloudReputationResult,
+            ref score,
+            reasons);
 
         score = Math.Clamp(score, 0, 100);
 
@@ -171,6 +212,130 @@ public sealed class FileRiskAssessor
         };
     }
 
+    /// <summary>
+    /// Applies a conservative score change based on Authenticode.
+    /// A valid signature does not automatically mean that a file is safe.
+    /// </summary>
+    private static void ApplyAuthenticodeRisk(
+        AuthenticodeResult? authenticodeResult,
+        string extension,
+        ref int score,
+        List<string> reasons)
+    {
+        // Do nothing if Authenticode data is not available.
+        if (authenticodeResult is null)
+        {
+            return;
+        }
+
+        switch (authenticodeResult.SignatureStatus)
+        {
+            case SignatureStatus.Valid:
+                score -= 10;
+
+                reasons.Add(
+                    "A valid Authenticode signature slightly reduces the local risk.");
+                break;
+
+            case SignatureStatus.Invalid:
+                score += 30;
+
+                reasons.Add(
+                    "The Authenticode signature is invalid or no longer matches the file.");
+                break;
+
+            case SignatureStatus.Revoked:
+                score += 40;
+
+                reasons.Add(
+                    "The signing certificate was revoked.");
+                break;
+
+            case SignatureStatus.Expired:
+                score += 15;
+
+                reasons.Add(
+                    "The signature could not be confirmed because the certificate expired.");
+                break;
+
+            case SignatureStatus.NotSigned:
+                // Missing signatures are mainly relevant for executable files.
+                if (VeryHighRiskExtensions.Contains(extension) ||
+                    HighRiskExtensions.Contains(extension))
+                {
+                    score += 10;
+
+                    reasons.Add(
+                        "The executable or script file has no embedded Authenticode signature.");
+                }
+
+                break;
+
+            case SignatureStatus.Unknown:
+            default:
+                reasons.Add(
+                    "The Authenticode status could not be clearly evaluated.");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Applies a score change based on VirusTotal's verdict. A confirmed
+    /// malicious hash forces the risk into VeryHigh regardless of any local
+    /// heuristics, since this is the strongest signal Guardian has access to.
+    /// </summary>
+    private static void ApplyCloudReputationRisk(
+        CloudReputationResult? cloudReputationResult,
+        ref int score,
+        List<string> reasons)
+    {
+        if (cloudReputationResult is null)
+        {
+            return;
+        }
+
+        switch (cloudReputationResult.Status)
+        {
+            case CloudReputationStatus.Malicious when cloudReputationResult.MaliciousCount >= 3:
+                score = Math.Max(score, 95);
+
+                reasons.Add(
+                    $"VirusTotal flagged this file as malicious ({cloudReputationResult.MaliciousCount} security vendors).");
+                break;
+
+            case CloudReputationStatus.Malicious:
+                score += 35;
+
+                reasons.Add(
+                    $"VirusTotal flagged this file as malicious ({cloudReputationResult.MaliciousCount} security vendor(s)).");
+                break;
+
+            case CloudReputationStatus.Suspicious:
+                score += 20;
+
+                reasons.Add(
+                    $"VirusTotal flagged this file as suspicious ({cloudReputationResult.SuspiciousCount} security vendor(s)).");
+                break;
+
+            case CloudReputationStatus.Clean:
+                score -= 10;
+
+                reasons.Add(
+                    "VirusTotal found no detections for this file.");
+                break;
+
+            case CloudReputationStatus.NotFound:
+            case CloudReputationStatus.NotChecked:
+            case CloudReputationStatus.Unavailable:
+            default:
+                // Hash unknown to VirusTotal, or the check was skipped/failed - no adjustment.
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Checks whether the detected file type matches the extension.
+    /// </summary>
     private static bool HasSignatureMismatch(
         FileSignatureResult fileSignatureResult)
     {
@@ -181,6 +346,9 @@ public sealed class FileRiskAssessor
                    StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Returns the score increase for a file type mismatch.
+    /// </summary>
     private static int GetSignatureMismatchRiskScore(
         string detectedType)
     {
@@ -193,6 +361,9 @@ public sealed class FileRiskAssessor
         };
     }
 
+    /// <summary>
+    /// Checks for file names such as invoice.pdf.exe.
+    /// </summary>
     private static bool HasSuspiciousDoubleExtension(
         string fileName)
     {
@@ -221,6 +392,9 @@ public sealed class FileRiskAssessor
                MediumRiskExtensions.Contains(previousExtension);
     }
 
+    /// <summary>
+    /// Converts the numeric score into a risk level.
+    /// </summary>
     private static RiskLevel ConvertScoreToLevel(int score)
     {
         return score switch

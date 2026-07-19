@@ -17,7 +17,7 @@ public sealed class Worker : BackgroundService
         CancellationToken stoppingToken)
     {
         _logger.LogInformation(
-            "Guardian wurde gestartet: {Time}",
+            "Guardian started: {Time}",
             DateTimeOffset.Now);
 
         _downloadWatcher.Start();
@@ -27,7 +27,7 @@ public sealed class Worker : BackgroundService
             while (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation(
-                    "Guardian Heartbeat: {Time}",
+                    "Guardian heartbeat: {Time}",
                     DateTimeOffset.Now);
 
                 await Task.Delay(
@@ -38,7 +38,7 @@ public sealed class Worker : BackgroundService
         catch (OperationCanceledException)
             when (stoppingToken.IsCancellationRequested)
         {
-            // Normales Beenden des Dienstes.
+            // Normal service shutdown.
         }
         finally
         {
@@ -50,7 +50,7 @@ public sealed class Worker : BackgroundService
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Guardian wird beendet: {Time}",
+            "Guardian is shutting down: {Time}",
             DateTimeOffset.Now);
 
         return base.StopAsync(cancellationToken);

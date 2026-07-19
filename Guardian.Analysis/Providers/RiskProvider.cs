@@ -23,10 +23,13 @@ public sealed class RiskProvider : IAnalysisProvider
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // Calculate the local risk using all available analysis results.
         context.Risk =
             _riskAssessor.Assess(
                 context.FilePath,
-                context.Signature);
+                context.Signature,
+                context.Authenticode,
+                context.CloudReputation);
 
         return Task.CompletedTask;
     }

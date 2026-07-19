@@ -1,0 +1,40 @@
+<UserControl x:Class="Guardian.Dashboard.Views.StatusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <StackPanel Margin="24">
+        <TextBlock Text="Protection Status" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
+
+        <TextBlock Text="{Binding StatusText}" FontSize="16" Margin="0,0,0,16">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="Green"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsProtectionActive}" Value="False">
+                            <Setter Property="Foreground" Value="Red"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+        <TextBlock Margin="0,0,0,4">
+            <Run Text="Last scan: "/>
+            <Run Text="{Binding LastScanAtUtc, StringFormat='{}{0:g}', TargetNullValue='never'}"/>
+        </TextBlock>
+
+        <TextBlock Margin="0,0,0,4">
+            <Run Text="Scans today: "/>
+            <Run Text="{Binding ScansToday}"/>
+        </TextBlock>
+
+        <TextBlock Margin="0,0,0,16">
+            <Run Text="Currently quarantined: "/>
+            <Run Text="{Binding ActiveQuarantineCount}"/>
+        </TextBlock>
+
+        <Button Content="Refresh" Width="120" HorizontalAlignment="Left" Command="{Binding RefreshCommand}"/>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Product>GuardianSense</Product>
+    <Company>GuardianSense</Company>
+    <Authors>GuardianSense Contributors</Authors>
+    <RepositoryUrl>https://github.com/6sense/GuardianSense</RepositoryUrl>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>
